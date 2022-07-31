@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Iterable, Optional
 
 from reprexlite.code import CodeBlock
 from reprexlite.formatting import Reprex, venues_dispatcher
@@ -16,6 +16,7 @@ def reprex(
     old_results: bool = False,
     print_=True,
     terminal=False,
+    initial_namespace: Optional[Dict] = None,
 ) -> Reprex:
     """Render reproducible examples of Python code for sharing. This function will evaluate your
     code and returns an instance of a [`Reprex`][reprexlite.formatting.Reprex] subclass. Calling
@@ -72,7 +73,12 @@ def reprex(
         # Don't screw output file or lexing for HTML and RTF with terminal syntax highlighting
         terminal = False
     code_block = CodeBlock(
-        input, style=style, comment=comment, old_results=old_results, terminal=terminal
+        input,
+        style=style,
+        comment=comment,
+        old_results=old_results,
+        terminal=terminal,
+        initial_namespace=initial_namespace,
     )
 
     reprex = venues_dispatcher[venue](
@@ -84,3 +90,38 @@ def reprex(
     if print_:
         print(reprex)
     return reprex
+
+
+def reprex_list(
+    inputs: Iterable[str], shared_namespace: bool = False, **kwargs
+) -> Iterable[Reprex]:
+    """Render an iterable of strings of Python code using the reprex function.
+
+    Provides the ability to share a namespace (variables, imports) across the
+    inputs.
+
+    Parameters
+    ----------
+    inputs : _type_
+        _description_
+    shared_namespace : bool, optional (default=False)
+        If True, pass the defined variables from previous reprexes into the
+        namespace (execution environment) of subsequent items.
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    reprexes = []
+    namespace = kwargs.pop("initial_namespace", {} if shared_namespace else None)
+
+    for s in inputs:
+        rep = reprex(s, initial_namespace=namespace, **kwargs)
+        reprexes.append(rep)
+
+        # get updates to the namespace from execution
+        if shared_namespace:
+            namespace.update(rep.code_block.namespace)
+
+    return reprexes

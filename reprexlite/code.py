@@ -3,7 +3,7 @@ from io import StringIO
 from itertools import chain
 from pprint import pformat
 import traceback
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import libcst as cst
 
@@ -21,10 +21,13 @@ class Result:
         comment (str): Line prefix to use when rendering the result for a reprex.
     """
 
-    def __init__(self, result: Any, stdout: Optional[str] = None, comment: str = "#>"):
+    def __init__(
+        self, result: Any, stdout: Optional[str] = None, comment: str = "#>", raised: bool = False
+    ):
         self.result = result
         self.stdout = stdout
         self.comment = comment
+        self.raised = raised
 
     def __str__(self) -> str:
         lines = []
@@ -65,6 +68,7 @@ class Statement:
         if "__name__" not in scope:
             scope["__name__"] = "__reprex__"
         stdout_io = StringIO()
+        raised = False
         try:
             with redirect_stdout(stdout_io):
                 try:
@@ -75,6 +79,7 @@ class Statement:
             stdout = stdout_io.getvalue().strip()
         except Exception as exc:
             result = NO_RETURN
+            raised = True
             # Skip first step of traceback, since that is this evaluate method
             if exc.__traceback__ is not None:
                 tb = exc.__traceback__.tb_next
@@ -85,7 +90,7 @@ class Statement:
                 )
         finally:
             stdout_io.close()
-        return Result(result, stdout=stdout)
+        return Result(result, stdout=stdout, raised=raised)
 
     def __str__(self) -> str:
         code = cst.Module(body=[self.stmt]).code
@@ -125,6 +130,7 @@ class CodeBlock:
         comment: str = "#>",
         terminal=False,
         old_results: bool = False,
+        initial_namespace: Optional[Dict] = None,
     ):
         """Initializer method.
 
@@ -152,7 +158,7 @@ class CodeBlock:
             Statement(stmt, style=style) for stmt in self.tree.body
         ]
         # Evaluate code
-        self.namespace: dict = {}
+        self.namespace: dict = {} if initial_namespace is None else initial_namespace
         self.results: List[Result] = [stmt.evaluate(self.namespace) for stmt in self.statements]
         for res in self.results:
             res.comment = comment
@@ -174,6 +180,10 @@ class CodeBlock:
             except ImportError:
                 pass
         return out.strip()
+
+    @property
+    def raised(self):
+        return any(r.raised for r in self.results)
 
     def _repr_html_(self):
         out = []
