@@ -15,6 +15,7 @@ nav:
   - Reprex Do's and Don'ts: "dos-and-donts.md"
   - CLI Help: "cli.md"
   - IPython/Jupyter Magic: "ipython-jupyter-magic.ipynb"
+  - Mkdocs Plugin: "mkdocs-plugin.md"
   - API Reference:
       - reprexlite: "api-reference/reprex.md"
       - reprexlite.code: "api-reference/code.md"
@@ -36,6 +37,10 @@ markdown_extensions:
 plugins:
   - search:
   - mkdocs-jupyter:
+  - reprexlite:
+      session_info: False 
+      scope: page
+      raise_on_error: True
   - mkdocstrings:
       default_handler: python
       handlers:

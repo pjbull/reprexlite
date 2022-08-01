@@ -39,7 +39,12 @@ setup(
         "Programming Language :: Python :: 3.9",
     ],
     description=("Render reproducible examples of Python code for sharing."),
-    entry_points={"console_scripts": ["reprex=reprexlite.cli:app"]},
+    entry_points={
+        "console_scripts": ["reprex=reprexlite.cli:app"],
+        'mkdocs.plugins': [
+            'reprexlite = reprexlite.mkdocs_plugin:ReprexlitePlugin',
+        ]
+    },
     extras_require={k: v for k, v in requirements.items() if k != "base"},
     install_requires=requirements["base"],
     license="MIT",
